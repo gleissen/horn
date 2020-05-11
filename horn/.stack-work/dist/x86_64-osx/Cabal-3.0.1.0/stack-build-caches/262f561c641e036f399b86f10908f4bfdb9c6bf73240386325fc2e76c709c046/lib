@@ -1,0 +1,16 @@
+/Users/gleissen/teaching/verification/horn/horn/horn.cabal:
+  hash: d8f1de330d7d1a1066ebe06b90df5e55da90f36c5c829b228dc3dfad8d46fb61
+  size: 810
+  modtime: 1589172405
+/Users/gleissen/teaching/verification/horn/horn/README.md:
+  hash: 141baee48bd3e772097e85208dec4e8db2c21ce9cba75bf82ecefe02cf11c789
+  size: 7
+  modtime: 1589059926
+/Users/gleissen/teaching/verification/horn/horn/src/Horn/Logic/Clauses.hs:
+  hash: bd02de7cc5315118ae4ddb827f5e54a9e853ce4f5754fdaa307a46bebe7a1985
+  size: 623
+  modtime: 1589175284
+/Users/gleissen/teaching/verification/horn/horn/src/Horn/Bindings/Z3.hs:
+  hash: e71141ab4a201c7be440303185b0e69275d30bc5041f741e7ccf8d10884d8119
+  size: 2569
+  modtime: 1589175376
