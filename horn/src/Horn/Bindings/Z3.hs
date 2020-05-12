@@ -2,13 +2,20 @@ module Horn.Bindings.Z3 where
 import           Control.Applicative
 import qualified Data.Map            as Map
 import           Data.Maybe
+import qualified Data.Set            as Set
 import qualified Horn.Logic.Clauses  as Logic
 import qualified Z3.Monad            as Z3
 
+
 -----------------------------------------------------------------
-get_model :: Logic.Base -> [Logic.Exp] -> Z3.Z3 (Maybe [Integer])
+get_model :: Logic.Base -> [Logic.Exp] -> IO (Maybe [Integer])
 -----------------------------------------------------------------
-get_model phi vs = do
+get_model phi vs = Z3.evalZ3 $ get_model_ phi vs
+
+-----------------------------------------------------------------
+get_model_ :: Logic.Base -> [Logic.Exp] -> Z3.Z3 (Maybe [Integer])
+-----------------------------------------------------------------
+get_model_ phi vs = do
   vars  <- mkVars vs
   let varMap = Map.fromList $ zip vs vars
   phiz3 <- toZ3 varMap phi
@@ -42,8 +49,8 @@ toZ3 varMap (Logic.Or es) = do
     Z3.mkOr es'
 
 toZ3 varMap (Logic.Implies e1 e2) = do
-    e1' <- toZ3Exp varMap e1
-    e2' <- toZ3Exp varMap e2
+    e1' <- toZ3 varMap e1
+    e2' <- toZ3 varMap e2
     Z3.mkImplies e1' e2'
 
 -----------------------------------------------------------------
@@ -72,17 +79,10 @@ mkVar (Logic.Var x) = Z3.mkFreshIntVar x
 mkVars :: [Logic.Exp] -> Z3.Z3 [Z3.AST]
 mkVars vs = mapM mkVar vs
 
-test ::  Z3.Z3 (Maybe [Integer])
--- x>=y /\ y>=2 -> x>=0
 test = do
-  x <- Z3.mkFreshIntVar "x"
-  y <- Z3.mkFreshIntVar "y"
-  _2 <- Z3.mkInteger 2
-  _0 <- Z3.mkInteger 0
-  a1 <- Z3.mkGe x y
-  a2 <- Z3.mkGe y _2
-  bd <- Z3.mkAnd [a1, a2]
-  hd <- Z3.mkLt x _0
-  Z3.assert bd
-  Z3.assert hd
-  fmap snd $ Z3.withModel $ \m -> catMaybes <$> mapM (Z3.evalInt m) [x,y]
+  -- check if x>=y /\ y>=2 -> x>=0 holds
+    let bd = Logic.And [  Logic.Geq (Logic.Var "x")(Logic.Var "y"),  Logic.Geq (Logic.Var "x")(Logic.Num 2)]
+    let phi =  Logic.And [bd, Logic.Neg (Logic.Geq (Logic.Var "x")(Logic.Num 0))]
+    let vars = [Logic.Var "x",Logic.Var "y"]
+    putStrLn (show $ Set.toList $ Logic.get_vars phi)
+    (get_model phi (Set.toList $ Logic.get_vars phi))

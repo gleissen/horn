@@ -1,4 +1,8 @@
 module Horn.Logic.Clauses where
+import           Data.Map (Map)
+import qualified Data.Map as Map
+import           Data.Set (Set)
+import qualified Data.Set as Set
 
 data Exp =   Var String
             | Num Integer
@@ -12,13 +16,69 @@ data Base =   Eq Exp Exp
             | Neg Base
             | And [Base]
             | Or  [Base]
-            | Implies Exp Exp
+            | Implies Base Base
             deriving (Show,Eq,Ord)
 
-data Pred = Pred String [Exp] deriving (Show,Eq,Ord)
+type Name = String
+type Var = Exp
+data Pred = Pred Name [Var] deriving (Show,Eq,Ord)
 
-data Horn a =  Horn { hd    :: Pred
-               ,      bd    :: [Pred]
-               ,      base  :: Base
-               ,      annot :: a
+data Horn a =  Horn { hd     :: Pred
+               ,      bd     :: [Pred]
+               ,      base   :: Base
+               ,      annot  :: a
+               ,      isProp :: Bool
                } deriving (Show,Eq,Ord)
+
+
+-- Solutions map each predicate names to a disjunction (set) of base formulas
+type Solution = Map Name (Set Base)
+
+-- Helper functions
+
+---------------------------
+get_vars :: Base -> Set Exp
+---------------------------
+get_vars (Eq e1 e2)      = Set.union  (get_vars_exp e1) (get_vars_exp e2)
+get_vars (Geq e1 e2)     = Set.union (get_vars_exp e1) (get_vars_exp e2)
+get_vars (Neg e)         = get_vars e
+get_vars (And es)        = Set.unions $ map get_vars es
+get_vars (Or es)         = Set.unions $ map get_vars es
+get_vars (Implies e1 e2) = Set.union (get_vars e1) (get_vars e2)
+
+------------------------------
+get_vars_exp :: Exp -> Set Exp
+------------------------------
+get_vars_exp (Var s)    = Set.singleton (Var s)
+get_vars_exp (Num n)    = Set.empty
+get_vars_exp (Plus es)  = Set.unions $ map get_vars_exp es
+get_vars_exp (Minus es) = Set.unions $ map get_vars_exp es
+get_vars_exp (Times es) = Set.unions $ map get_vars_exp es
+
+
+----------------------------------------
+substVars :: [Var] -> [Var] -> Base ->  Base
+----------------------------------------
+substVars vs' vs phi = foldl ((flip.uncurry) subst) phi (zip vs' vs)
+
+-- subst phi y x = phi[y/x]
+-------------------------------------
+subst :: Var -> Var -> Base ->  Base
+-------------------------------------
+subst  y x (Eq e1 e2)      =  Eq  (subst_exp y x e1) (subst_exp y x e2)
+subst  y x (Geq e1 e2)     =  Eq  (subst_exp y x e1) (subst_exp y x e2)
+subst  y x (Neg e)         =  Neg (subst y x e)
+subst  y x (And es)        =  And $ map (subst y x) es
+subst  y x (Or es)         =  Or  $ map (subst y x) es
+subst  y x (Implies e1 e2) = Implies (subst y x e1) (subst y x e2)
+
+---------------------------------------
+subst_exp :: Var -> Var -> Exp ->  Exp
+---------------------------------------
+subst_exp (Var y) (Var x) (Var x')
+      | x==x'            = Var y
+      | otherwise        = Var x'
+subst_exp y x (Num n)    = Num n
+subst_exp y x (Plus es)  = Plus $ map (subst_exp y x) es
+subst_exp y x (Minus es) = Minus $ map (subst_exp y x) es
+subst_exp y x (Times es) = Times $ map (subst_exp y x) es
