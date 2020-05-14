@@ -3,8 +3,21 @@ import           Control.Applicative
 import qualified Data.Map            as Map
 import           Data.Maybe
 import qualified Data.Set            as Set
+import           Debug.Trace
 import qualified Horn.Logic.Clauses  as Logic
 import qualified Z3.Monad            as Z3
+
+------------------------------------------------
+implies :: Logic.Base -> Logic.Base -> IO Bool
+------------------------------------------------
+implies p q = do
+    model <- get_model (Logic.And [p, Logic.Neg q]) vars
+    case model of
+      Nothing -> return True
+      Just _  -> return False
+    where
+      vars = Set.toList $ Set.union (Logic.get_vars p) (Logic.get_vars q)
+
 
 
 -----------------------------------------------------------------
@@ -21,6 +34,7 @@ get_model_ phi vs = do
   phiz3 <- toZ3 varMap phi
   Z3.assert phiz3
   model <- fmap snd $ (Z3.withModel $ \m -> (catMaybes <$> (mapM (Z3.evalInt m) vars)))
+  --traceM $ "\ndbg calling z3 vars: " ++ (show vs) ++ " model: " ++ (show model)
   return $ model
 
 ----------------------------------------------------------------

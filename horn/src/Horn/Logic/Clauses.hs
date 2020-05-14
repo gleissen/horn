@@ -1,8 +1,10 @@
 module Horn.Logic.Clauses where
-import           Data.Map (Map)
-import qualified Data.Map as Map
-import           Data.Set (Set)
-import qualified Data.Set as Set
+import           Data.Map    (Map)
+import qualified Data.Map    as Map
+import           Data.Maybe
+import           Data.Set    (Set)
+import qualified Data.Set    as Set
+import           Debug.Trace
 
 data Exp =   Var String
             | Num Integer
@@ -21,7 +23,7 @@ data Base =   Eq Exp Exp
 
 type Name = String
 type Var = Exp
-data Pred = Pred Name [Var] deriving (Show,Eq,Ord)
+data Pred = Pred { name :: Name, vars :: [Var]} deriving (Show,Eq,Ord)
 
 data Horn a =  Horn { hd     :: Pred
                ,      bd     :: [Pred]
@@ -30,11 +32,16 @@ data Horn a =  Horn { hd     :: Pred
                ,      isProp :: Bool
                } deriving (Show,Eq,Ord)
 
-
 -- Solutions map each predicate names to a disjunction (set) of base formulas
 type Solution = Map Name (Set Base)
 
 -- Helper functions
+------------------------------------------
+solve :: Solution -> Pred -> Base
+------------------------------------------
+solve sol (Pred p vs) =  substVars vs solVs pSol
+  where pSol = Or $ Set.toList $ fromJust $ Map.lookup p sol
+        solVs = Set.toList $ get_vars pSol
 
 ---------------------------
 get_vars :: Base -> Set Exp
@@ -66,7 +73,7 @@ substVars vs' vs phi = foldl ((flip.uncurry) subst) phi (zip vs' vs)
 subst :: Var -> Var -> Base ->  Base
 -------------------------------------
 subst  y x (Eq e1 e2)      =  Eq  (subst_exp y x e1) (subst_exp y x e2)
-subst  y x (Geq e1 e2)     =  Eq  (subst_exp y x e1) (subst_exp y x e2)
+subst  y x (Geq e1 e2)     =  Geq  (subst_exp y x e1) (subst_exp y x e2)
 subst  y x (Neg e)         =  Neg (subst y x e)
 subst  y x (And es)        =  And $ map (subst y x) es
 subst  y x (Or es)         =  Or  $ map (subst y x) es
