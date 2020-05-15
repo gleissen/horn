@@ -1,4 +1,6 @@
+{-# LANGUAGE UnicodeSyntax #-}
 module Horn.Logic.Clauses where
+import           Data.List   (intercalate)
 import           Data.Map    (Map)
 import qualified Data.Map    as Map
 import           Data.Maybe
@@ -11,7 +13,7 @@ data Exp =   Var String
             | Plus [Exp]
             | Minus [Exp]
             | Times [Exp]
-            deriving (Show,Eq,Ord)
+            deriving (Eq,Ord)
 
 data Base =   Eq Exp Exp
             | Geq Exp Exp
@@ -19,23 +21,50 @@ data Base =   Eq Exp Exp
             | And [Base]
             | Or  [Base]
             | Implies Base Base
-            deriving (Show,Eq,Ord)
+            deriving (Eq,Ord)
 
 type Name = String
 type Var = Exp
-data Pred = Pred { name :: Name, vars :: [Var]} deriving (Show,Eq,Ord)
+data Pred = Pred { name :: Name, vars :: [Var]} deriving (Eq,Ord)
 
 data Horn a =  Horn { hd    :: Pred
                ,      bd    :: [Pred]
                ,      base  :: Base
                ,      annot :: a
-               } deriving (Show,Eq,Ord)
+               } deriving (Eq,Ord)
 
 -- Solutions map each predicate names to a disjunction (set) of base formulas
 type Solution = Map Name (Set Base)
 
--- Helper functions
 
+-- pretty printing
+instance Show Base where
+  show (Eq e1 e2)      = (show e1) ++ "=" ++ (show e2)
+  show (Geq e1 e2)     = (show e1) ++ "≥" ++ (show e2)
+  show (Neg e)         = "¬" ++ (show e)
+  show (And es)        = intercalate "∧" (map show es)
+  show (Or es)         = intercalate "∨" (map show es)
+  show (Implies e1 e2) = (show e1) ++ "⇒" ++ (show e1)
+
+instance Show Exp where
+  show (Var s)    = s
+  show (Num n)    = (show n)
+  show (Plus es)  = intercalate "+" (map show es)
+  show (Minus es) = intercalate "-" (map show es)
+  show (Times es) = intercalate "*" (map show es)
+
+instance Show (Horn a) where
+  show h = (show $ hd h) ++ " :- " ++ bd_ ++ "∧" ++ show (base h) ++ "."
+    where
+      bd_ = intercalate "∧" (map show $ bd h)
+
+instance Show Pred where
+  show p = (show $ name p) ++ "(" ++ vars_ ++ ")"
+    where
+      vars_ = intercalate "," (map show $ vars p)
+
+
+-- Helper functions
 -------------------------------------
 getPredNames :: Horn a -> Set Name
 -------------------------------------
