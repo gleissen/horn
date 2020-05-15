@@ -25,21 +25,38 @@ type Name = String
 type Var = Exp
 data Pred = Pred { name :: Name, vars :: [Var]} deriving (Show,Eq,Ord)
 
-data Horn a =  Horn { hd     :: Pred
-               ,      bd     :: [Pred]
-               ,      base   :: Base
-               ,      annot  :: a
-               ,      isProp :: Bool
+data Horn a =  Horn { hd    :: Pred
+               ,      bd    :: [Pred]
+               ,      base  :: Base
+               ,      annot :: a
                } deriving (Show,Eq,Ord)
 
 -- Solutions map each predicate names to a disjunction (set) of base formulas
 type Solution = Map Name (Set Base)
 
 -- Helper functions
+
+-------------------------------------
+getPredNames :: Horn a -> Set Name
+-------------------------------------
+getPredNames h = Set.fromList $ map name ([hd h] ++ (bd h))
+
+
+-------------------------------------------------
+dependsOn :: Name -> Horn a -> Bool
+-------------------------------------------------
+dependsOn p h = or $ map (((==) p).name) (bd h)
+
+------------------------
+isBase :: Horn a -> Bool
+------------------------
+isBase h = (bd h) == []
+
+
 ------------------------------------------
-solve :: Solution -> Pred -> Base
+plugin :: Solution -> Pred -> Base
 ------------------------------------------
-solve sol (Pred p vs) =  substVars vs solVs pSol
+plugin sol (Pred p vs) =  substVars vs solVs pSol
   where pSol = Or $ Set.toList $ fromJust $ Map.lookup p sol
         solVs = Set.toList $ get_vars pSol
 

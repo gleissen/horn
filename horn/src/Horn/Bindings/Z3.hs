@@ -12,13 +12,12 @@ implies :: Logic.Base -> Logic.Base -> IO Bool
 ------------------------------------------------
 implies p q = do
     model <- get_model (Logic.And [p, Logic.Neg q]) vars
+    --putStrLn $ "checking if " ++ (show p) ++ "implies " ++ (show q) ++ " :" ++ (show model)
     case model of
       Nothing -> return True
       Just _  -> return False
     where
       vars = Set.toList $ Set.union (Logic.get_vars p) (Logic.get_vars q)
-
-
 
 -----------------------------------------------------------------
 get_model :: Logic.Base -> [Logic.Exp] -> IO (Maybe [Integer])
@@ -34,7 +33,6 @@ get_model_ phi vs = do
   phiz3 <- toZ3 varMap phi
   Z3.assert phiz3
   model <- fmap snd $ (Z3.withModel $ \m -> (catMaybes <$> (mapM (Z3.evalInt m) vars)))
-  --traceM $ "\ndbg calling z3 vars: " ++ (show vs) ++ " model: " ++ (show model)
   return $ model
 
 ----------------------------------------------------------------
@@ -48,7 +46,7 @@ toZ3 varMap (Logic.Eq e1 e2) = do
 toZ3 varMap (Logic.Geq e1 e2) = do
   e1' <- toZ3Exp varMap e1
   e2' <- toZ3Exp varMap e2
-  Z3.mkGt e1' e2'
+  Z3.mkGe e1' e2'
 
 toZ3 varMap (Logic.Neg e) = do
     e' <- toZ3 varMap e
