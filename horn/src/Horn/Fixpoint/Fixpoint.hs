@@ -145,20 +145,23 @@ test = do
     --let hs' = (filter isBase hs)
     --(sol,ws) <- evalStateT (initWL preds hs') initState
     --putStrLn $ "Initial Solution and worklist " ++ (show sol) ++ " " ++ (show ws)
-     putStrLn $ "Solving clauses: " ++ show hs
+     putStrLn $ "Solving clauses: "
+     putStrLn ""
+     mapM_ (\h -> putStrLn (show h)) hs
+     putStrLn ""
      sol <- evalStateT (solve hs preds) initState
      putStr $ "Found solution " ++ (show sol)
     where
       preds = [Geq (Var "x") (Num 0)]
-      hs = [Horn {    hd = Pred "h" [Var "x'"]
+      hs = [ Horn {      hd = Pred "h" [Var "x"]
+                  ,      bd = []
+                  ,      base = Eq (Var "x") (Num 0)
+                  ,      annot=()
+           },
+           Horn {    hd = Pred "h" [Var "x'"]
                ,      bd = [Pred "h" [Var "x"]]
                ,      base = Eq (Var "x'") (Plus [Var "x", Num 1])
                ,      annot=()},
-            Horn {      hd = Pred "h" [Var "x"]
-                        ,      bd = []
-                        ,      base = Eq (Var "x") (Num 0)
-                        ,      annot=()
-            },
             Horn {      hd = Pred "q" [Var "x'"]
                         ,      bd = [Pred "h" [Var "x"]]
                         ,      base = Eq (Var "x") (Var "x'")

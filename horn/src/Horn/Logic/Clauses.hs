@@ -17,6 +17,7 @@ data Exp =   Var String
 
 data Base =   Eq Exp Exp
             | Geq Exp Exp
+            | Leq Exp Exp
             | Neg Base
             | And [Base]
             | Or  [Base]
@@ -36,11 +37,14 @@ data Horn a =  Horn { hd    :: Pred
 -- Solutions map each predicate names to a disjunction (set) of base formulas
 type Solution = Map Name (Set Base)
 
-
+------------------
 -- pretty printing
+------------------
+
 instance Show Base where
   show (Eq e1 e2)      = (show e1) ++ "=" ++ (show e2)
   show (Geq e1 e2)     = (show e1) ++ "≥" ++ (show e2)
+  show (Leq e1 e2)     = (show e1) ++ "≤" ++ (show e2)
   show (Neg e)         = "¬" ++ (show e)
   show (And es)        = intercalate "∧" (map show es)
   show (Or es)         = intercalate "∨" (map show es)
@@ -54,22 +58,24 @@ instance Show Exp where
   show (Times es) = intercalate "*" (map show es)
 
 instance Show (Horn a) where
-  show h = (show $ hd h) ++ " :- " ++ bd_ ++ "∧" ++ show (base h) ++ "."
+  show h = case (length (bd h)) of
+    0         -> (show $ hd h) ++ " :- " ++ show (base h) ++ "."
+    otherwise ->  (show $ hd h) ++ " :- " ++ bd_ ++ " ∧ " ++ show (base h) ++ "."
     where
       bd_ = intercalate "∧" (map show $ bd h)
 
 instance Show Pred where
-  show p = (show $ name p) ++ "(" ++ vars_ ++ ")"
+  show p = (name p) ++ "(" ++ vars_ ++ ")"
     where
       vars_ = intercalate "," (map show $ vars p)
 
 
 -- Helper functions
+
 -------------------------------------
 getPredNames :: Horn a -> Set Name
 -------------------------------------
 getPredNames h = Set.fromList $ map name ([hd h] ++ (bd h))
-
 
 -------------------------------------------------
 dependsOn :: Name -> Horn a -> Bool
@@ -80,7 +86,6 @@ dependsOn p h = or $ map (((==) p).name) (bd h)
 isBase :: Horn a -> Bool
 ------------------------
 isBase h = (bd h) == []
-
 
 ------------------------------------------
 plugin :: Solution -> Pred -> Base
@@ -94,6 +99,7 @@ get_vars :: Base -> Set Exp
 ---------------------------
 get_vars (Eq e1 e2)      = Set.union  (get_vars_exp e1) (get_vars_exp e2)
 get_vars (Geq e1 e2)     = Set.union (get_vars_exp e1) (get_vars_exp e2)
+get_vars (Leq e1 e2)     = Set.union (get_vars_exp e1) (get_vars_exp e2)
 get_vars (Neg e)         = get_vars e
 get_vars (And es)        = Set.unions $ map get_vars es
 get_vars (Or es)         = Set.unions $ map get_vars es
@@ -108,7 +114,6 @@ get_vars_exp (Plus es)  = Set.unions $ map get_vars_exp es
 get_vars_exp (Minus es) = Set.unions $ map get_vars_exp es
 get_vars_exp (Times es) = Set.unions $ map get_vars_exp es
 
-
 ----------------------------------------
 substVars :: [Var] -> [Var] -> Base ->  Base
 ----------------------------------------
@@ -120,6 +125,7 @@ subst :: Var -> Var -> Base ->  Base
 -------------------------------------
 subst  y x (Eq e1 e2)      =  Eq  (subst_exp y x e1) (subst_exp y x e2)
 subst  y x (Geq e1 e2)     =  Geq  (subst_exp y x e1) (subst_exp y x e2)
+subst  y x (Leq e1 e2)     =  Leq  (subst_exp y x e1) (subst_exp y x e2)
 subst  y x (Neg e)         =  Neg (subst y x e)
 subst  y x (And es)        =  And $ map (subst y x) es
 subst  y x (Or es)         =  Or  $ map (subst y x) es
